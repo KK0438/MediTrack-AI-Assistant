@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+
+
+/* Calendar custom styling */
+.custom-calendar {
+  width: 100%;
+  max-width: 700px; /* Large on desktop */
+}
+
+/* Status dots */
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin: 2px auto 0 auto;
+}
+
+.status-dot.green {
+  background-color: #22c55e;
+}
+
+.status-dot.red {
+  background-color: #ef4444;
+}
+
+.status-dot.yellow {
+  background-color: #facc15;
+}
+
+/* Legend dots */
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-dot.green {
+  background-color: #22c55e;
+}
+.legend-dot.red {
+  background-color: #ef4444;
+}
+.legend-dot.yellow {
+  background-color: #facc15;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .custom-calendar {
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+
+  .daily-summary {
+    max-width: 90%;
+  }
+
+  .react-calendar__tile {
+    padding: 0.5rem !important;
+  }
+
+  .react-calendar__month-view__days__day {
+    font-size: 0.65rem;
+  }
+}
