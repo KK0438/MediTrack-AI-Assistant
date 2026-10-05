@@ -6,9 +6,9 @@ import { AppContext } from "../context/AppContext";
 function PublicRoute({ children }) {
   const { user } = useContext(AppContext);
 
-  // If user is logged in, redirect to Home instead of Dashboard
+  // If user is logged in, redirect to Dashboard
   if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;

@@ -3,7 +3,7 @@ import React, { useContext, useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
 import { FaChevronDown, FaBell, FaBars, FaTimes } from "react-icons/fa";
-import axios from "axios";
+import API from "../api/axios";
 
 function Navbar() {
   const { user, logout } = useContext(AppContext);
@@ -28,10 +28,7 @@ function Navbar() {
     if (!token) return;
 
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/stats`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await API.get("/dashboard/stats");
 
       const todaySchedule = res.data.todaySchedule || [];
       const pending = todaySchedule.filter((item) => item.status === "Pending");

@@ -1,6 +1,6 @@
 // src/pages/History.jsx
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api/axios";
 
 const History = () => {
   const [history, setHistory] = useState([]);
@@ -13,10 +13,7 @@ const History = () => {
     if (!token) return;
 
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/history`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await API.get("/dashboard/history");
       setHistory(res.data);
       setFilteredHistory(res.data);
     } catch (error) {

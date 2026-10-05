@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
-import axios from "axios";
+import API from "../api/axios";
 
 const CalendarView = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -12,14 +12,7 @@ const CalendarView = () => {
   // Fetch medicine status
   const fetchStatus = async () => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const res = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/medicine-status`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
+      const res = await API.get("/dashboard/medicine-status");
       setStatusData(res.data);
     } catch (err) {
       console.error("Error fetching medicine status:", err);

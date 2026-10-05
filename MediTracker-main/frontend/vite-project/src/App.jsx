@@ -104,11 +104,7 @@ function App() {
         >
           <Route
             index
-            element={
-              <h1 className="text-2xl font-bold">
-                Dashboard Overview
-              </h1>
-            }
+            element={null}
           />
           <Route path="add-medicine" element={<AddMedicine />} />
           <Route path="my-medicine" element={<MyMedicine />} />

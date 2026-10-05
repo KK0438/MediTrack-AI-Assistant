@@ -1,5 +1,6 @@
 // src/pages/Contact.jsx
 import React, { useState } from "react";
+import API from "../api/axios";
 import ContactsImage from "../assets/contacts.png"; // make sure this image exists
 
 function Contact() {
@@ -22,23 +23,12 @@ function Contact() {
     setSuccess("");
 
     try {
-      const response = await fetch("http://localhost:4000/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setSuccess(data.message);
-        setFormData({ name: "", email: "", subject: "", message: "" });
-      } else {
-        setSuccess(data.error || "Failed to send message. Try again later.");
-      }
+      const res = await API.post("/contact", formData);
+      setSuccess(res.data?.message || "Message sent successfully!");
+      setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (err) {
       console.error("Error sending message:", err);
-      setSuccess("Failed to send message. Try again later.");
+      setSuccess(err.response?.data?.error || "Failed to send message. Try again later.");
     }
 
     setLoading(false);

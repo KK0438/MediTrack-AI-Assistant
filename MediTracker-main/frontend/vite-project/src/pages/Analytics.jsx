@@ -1,6 +1,6 @@
 // src/components/Analytics.jsx
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api/axios";
 import {
   BarChart,
   Bar,
@@ -27,11 +27,7 @@ const Analytics = () => {
 
   const fetchAnalytics = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/analytics`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await API.get("/dashboard/analytics");
       setAnalytics({
         total: res.data.total || 0,
         taken: res.data.taken || 0,

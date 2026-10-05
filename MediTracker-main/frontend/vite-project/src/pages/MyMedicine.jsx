@@ -1,6 +1,6 @@
 // src/pages/MyMedicine.jsx
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import API from "../api/axios";
 
 const MyMedicine = () => {
   const [medicines, setMedicines] = useState([]);
@@ -9,15 +9,10 @@ const MyMedicine = () => {
 
   const fetchMedicines = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/medicines`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await API.get("/medicines");
       setMedicines(res.data);
     } catch (error) {
       console.error("Error fetching medicines", error);
-      alert("Failed to fetch medicines. Are you logged in?");
     }
   };
 
@@ -28,10 +23,7 @@ const MyMedicine = () => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this medicine?")) return;
     try {
-      const token = localStorage.getItem("token");
-      await axios.delete(`${import.meta.env.VITE_BACKEND_URL}/api/medicines/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await API.delete(`/medicines/${id}`);
       fetchMedicines();
     } catch (error) {
       console.error("Delete failed", error);
@@ -49,10 +41,7 @@ const MyMedicine = () => {
 
   const handleUpdate = async (id) => {
     try {
-      const token = localStorage.getItem("token");
-      await axios.put(`${import.meta.env.VITE_BACKEND_URL}/api/medicines/${id}`, editData, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await API.put(`/medicines/${id}`, editData);
       setEditingId(null);
       fetchMedicines();
     } catch (error) {

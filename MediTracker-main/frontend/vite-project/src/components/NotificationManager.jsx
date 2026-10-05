@@ -1,6 +1,6 @@
 // src/components/NotificationManager.jsx
 import { useContext, useEffect, useRef, useState } from "react";
-import axios from "axios";
+import API from "../api/axios";
 import { AppContext } from "../context/AppContext";
 import {
   getVoiceReminderSlot,
@@ -62,10 +62,7 @@ const NotificationManager = () => {
 
       checkingRef.current = true;
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/stats`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        const res = await API.get("/dashboard/stats");
 
         const todaySchedule = res.data.todaySchedule || [];
         const now = new Date();

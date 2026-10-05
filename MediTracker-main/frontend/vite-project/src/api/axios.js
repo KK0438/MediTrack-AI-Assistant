@@ -1,14 +1,39 @@
 import axios from "axios";
 
-const API = axios.create({
-  baseURL: `${import.meta.env.VITE_BACKEND_URL}/api`,
-});
+export const getActiveBackendUrl = () => {
+  if (typeof window !== "undefined") {
+    const custom = localStorage.getItem("meditracker_backend_url");
+    if (custom) return custom.trim().replace(/\/+$/, "");
+  }
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
+  if (envUrl && envUrl.trim()) {
+    return envUrl.trim().replace(/\/+$/, "");
+  }
+  // Smart fallback for Vercel deployment if VITE_BACKEND_URL was not set in build
+  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+    return "https://jump-poems-level-told.trycloudflare.com";
+  }
+  return "";
+};
 
-// Attach token automatically
+export const setCustomBackendUrl = (url) => {
+  if (typeof window === "undefined") return;
+  if (!url || !url.trim()) {
+    localStorage.removeItem("meditracker_backend_url");
+  } else {
+    localStorage.setItem("meditracker_backend_url", url.trim().replace(/\/+$/, ""));
+  }
+};
+
+const API = axios.create();
+
+// Attach dynamic baseURL and token automatically
 API.interceptors.request.use(
   (req) => {
-    const token = localStorage.getItem("token");
+    const backendUrl = getActiveBackendUrl();
+    req.baseURL = backendUrl ? `${backendUrl}/api` : "/api";
 
+    const token = localStorage.getItem("token");
     if (token) {
       req.headers.Authorization = `Bearer ${token}`;
     }

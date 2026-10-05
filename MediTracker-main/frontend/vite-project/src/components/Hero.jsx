@@ -1,11 +1,12 @@
-// src/components/Hero.jsx
-import React from "react";
+import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import HeroImage from "../assets/hero.png"; // Make sure hero.png exists
 import Features from "./Features";
+import { AppContext } from "../context/AppContext";
 
 function Hero() {
   const navigate = useNavigate();
+  const { user } = useContext(AppContext);
 
   return (
     <div className="relative w-full h-screen bg-gray-900">
@@ -33,10 +34,11 @@ function Hero() {
 
           {/* Button */}
           <button
-            onClick={() => navigate("/register")}
-           className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-lg text-lg font-semibold 
+            onClick={() => navigate(user ? "/dashboard" : "/register")}
+            className="mt-8 px-8 py-3 bg-blue-600 text-white rounded-lg text-lg font-semibold 
   hover:bg-white hover:text-blue-600 transition duration-300 shadow-lg"
->            Get Started
+          >
+            {user ? "Go to Dashboard" : "Get Started"}
           </button>
 
         </div>

@@ -23,6 +23,10 @@ import "./reminderCron.js";
 dotenv.config();
 
 const app = express();
+const allowedOrigins = new Set([
+  process.env.CLIENT_URL || "http://localhost:5173",
+  "https://meditracker-public.vercel.app",
+]);
 
 // ---------------------------
 // Middleware
@@ -31,7 +35,13 @@ app.use(express.json({ limit: "10mb" }));
 
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.has(origin) || origin.endsWith(".vercel.app")) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Origin not allowed by CORS"));
+    },
   })
 );
 
@@ -80,12 +90,23 @@ app.use((err, req, res, next) => {
   });
 });
 
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled Rejection:", reason);
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+});
+
+import { seedDemoData } from "./utils/seedDemoData.js";
+
 // ---------------------------
 // Start Server
 // ---------------------------
 const PORT = process.env.PORT || 4000;
 
-connectDB().then(() => {
+connectDB().then(async () => {
+  await seedDemoData();
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });

@@ -2,7 +2,7 @@
 import React, { useContext, useRef, useState, useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "../context/AppContext";
-import axios from "axios";
+import API from "../api/axios";
 import NotificationManager from "../components/NotificationManager";
 import { FaBars, FaTimes } from "react-icons/fa";
 
@@ -43,10 +43,7 @@ const DashBoard = () => {
     if (!token) return navigate("/login");
 
     try {
-      const res = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/stats`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await API.get("/dashboard/stats");
 
       setStats(res.data.stats || {});
       setTodaySchedule(res.data.todaySchedule || []);
@@ -72,11 +69,11 @@ const DashBoard = () => {
     if (!token) return navigate("/login");
 
     try {
-      await axios.put(
-        `${import.meta.env.VITE_BACKEND_URL}/api/dashboard/mark-dose/${medicineId}`,
-        { status, date: log.date, time: log.time },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await API.put(`/dashboard/mark-dose/${medicineId}`, {
+        status,
+        date: log.date,
+        time: log.time,
+      });
 
       setTodaySchedule((prev) =>
         prev.map((item) =>
@@ -100,19 +97,14 @@ const DashBoard = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const token = localStorage.getItem("token");
     const formData = new FormData();
     formData.append("profilePic", file);
 
     try {
       setUploading(true);
-      const res = await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/user/upload-profile`,
-        formData,
-        {
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-        }
-      );
+      const res = await API.post("/user/upload-profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
       setUser((prev) => ({ ...prev, profilePic: res.data.profilePic }));
       setUploading(false);
@@ -292,7 +284,7 @@ const DashBoard = () => {
         </div>
 
         {/* Dashboard Home */}
-        {location.pathname === "/dashboard" && <DashboardHome />}
+        {(location.pathname === "/dashboard" || location.pathname === "/dashboard/") && <DashboardHome />}
 
         {/* Render other routes */}
         <Outlet />

@@ -1,6 +1,6 @@
 // src/pages/AddMedicine.jsx
 import React, { useState, useContext } from "react";
-import axios from "axios";
+import API from "../api/axios";
 import { AppContext } from "../context/AppContext";
 
 const AddMedicine = () => {
@@ -32,14 +32,7 @@ const AddMedicine = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${import.meta.env.VITE_BACKEND_URL}/api/medicines`,
-        medicine,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await API.post("/medicines", medicine);
 
       alert("Medicine added successfully!");
       setMedicine({

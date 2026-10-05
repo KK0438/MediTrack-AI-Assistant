@@ -1,6 +1,6 @@
 // src/pages/Blog.jsx
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import API from "../api/axios";
 
 function Blog() {
   const [blogs, setBlogs] = useState([]);
@@ -9,7 +9,7 @@ function Blog() {
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await axios.get("http://localhost:4000/api/blogs");
+        const response = await API.get("/blogs");
         setBlogs(response.data);
       } catch (error) {
         console.error("Error fetching articles:", error);
