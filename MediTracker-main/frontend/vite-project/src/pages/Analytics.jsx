@@ -1,6 +1,6 @@
-// src/components/Analytics.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import API from "../api/axios";
+import { AppContext } from "../context/AppContext";
 import {
   BarChart,
   Bar,
@@ -15,6 +15,7 @@ import {
 } from "recharts";
 
 const Analytics = () => {
+  const { user } = useContext(AppContext);
   const [analytics, setAnalytics] = useState({
     total: 0,
     taken: 0,
@@ -43,8 +44,17 @@ const Analytics = () => {
   };
 
   useEffect(() => {
+    setAnalytics({
+      total: 0,
+      taken: 0,
+      missed: 0,
+      pending: 0,
+      adherence: 0,
+      medicineWise: [],
+      monthlyProgress: [],
+    });
     fetchAnalytics();
-  }, []);
+  }, [user?._id || user?.id || user?.email]);
 
   const COLORS = ["#22c55e", "#ef4444", "#facc15"];
   const barData = [

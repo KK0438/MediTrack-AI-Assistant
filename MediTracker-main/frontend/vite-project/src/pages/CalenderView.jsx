@@ -1,10 +1,11 @@
-// src/pages/CalenderView.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import Calendar from "react-calendar";
 import "react-calendar/dist/Calendar.css";
 import API from "../api/axios";
+import { AppContext } from "../context/AppContext";
 
 const CalendarView = () => {
+  const { user } = useContext(AppContext);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [statusData, setStatusData] = useState([]);
   const [dailySummary, setDailySummary] = useState(null);
@@ -20,8 +21,9 @@ const CalendarView = () => {
   };
 
   useEffect(() => {
+    setStatusData([]);
     fetchStatus();
-  }, []);
+  }, [user?._id || user?.id || user?.email]);
 
   const formatDate = (date) =>
     `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(

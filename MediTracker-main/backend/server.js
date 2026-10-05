@@ -75,11 +75,23 @@ app.get("/", (req, res) => {
   res.send("MediTrack Backend API is running...");
 });
 
-app.delete("/api/auth/clear-test-user/:email", async (req, res) => {
+app.get("/api/debug-db", async (req, res) => {
   try {
     const User = (await import("./models/user.js")).default;
-    await User.deleteOne({ email: req.params.email });
-    res.json({ success: true, message: `User ${req.params.email} cleared` });
+    const Medicine = (await import("./models/medicine.js")).default;
+    const users = await User.find().select("-password");
+    const medicines = await Medicine.find();
+    res.json({ users, medicines });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/debug-medicine/:id", async (req, res) => {
+  try {
+    const Medicine = (await import("./models/medicine.js")).default;
+    await Medicine.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

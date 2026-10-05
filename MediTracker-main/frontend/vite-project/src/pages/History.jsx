@@ -1,8 +1,9 @@
-// src/pages/History.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import API from "../api/axios";
+import { AppContext } from "../context/AppContext";
 
 const History = () => {
+  const { user } = useContext(AppContext);
   const [history, setHistory] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [dateFilter, setDateFilter] = useState("");
@@ -22,8 +23,10 @@ const History = () => {
   };
 
   useEffect(() => {
+    setHistory([]);
+    setFilteredHistory([]);
     fetchHistory();
-  }, []);
+  }, [user?._id || user?.id || user?.email]);
 
   // Filters
   useEffect(() => {

@@ -1,8 +1,9 @@
-// src/pages/MyMedicine.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import API from "../api/axios";
+import { AppContext } from "../context/AppContext";
 
 const MyMedicine = () => {
+  const { user } = useContext(AppContext);
   const [medicines, setMedicines] = useState([]);
   const [editData, setEditData] = useState({});
   const [editingId, setEditingId] = useState(null);
@@ -17,8 +18,9 @@ const MyMedicine = () => {
   };
 
   useEffect(() => {
+    setMedicines([]);
     fetchMedicines();
-  }, []);
+  }, [user?._id || user?.id || user?.email]);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this medicine?")) return;

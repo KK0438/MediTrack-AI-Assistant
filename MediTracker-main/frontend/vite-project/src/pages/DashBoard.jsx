@@ -9,7 +9,7 @@ import { FaBars, FaTimes } from "react-icons/fa";
 const DashBoard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, setUser } = useContext(AppContext);
+  const { user, setUser, logout } = useContext(AppContext);
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -58,10 +58,22 @@ const DashBoard = () => {
   };
 
   useEffect(() => {
-    fetchDashboard();
+    // Reset stats immediately when user switches to prevent showing previous user's data
+    setStats({
+      totalMedicines: 0,
+      missedDoses: 0,
+      todayDoses: 0,
+      takenDoses: 0,
+    });
+    setTodaySchedule([]);
+    setUpcomingSchedule([]);
+
+    if (user) {
+      fetchDashboard();
+    }
     const interval = setInterval(fetchDashboard, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user?._id || user?.id || user?.email]);
 
   // Mark dose
   const markDose = async (medicineId, status, log) => {
@@ -224,7 +236,7 @@ const DashBoard = () => {
         <p className="text-sm text-blue-200">{user?.email || ""}</p>
       </div>
 
-      <ul className="flex flex-col space-y-2 px-2">
+      <ul className="flex flex-col space-y-2 px-2 flex-1">
         {menuItems.map((item, idx) => (
           <li key={idx}>
             <Link
@@ -239,6 +251,19 @@ const DashBoard = () => {
           </li>
         ))}
       </ul>
+
+      <div className="p-4 border-t border-blue-800">
+        <button
+          type="button"
+          onClick={() => {
+            logout();
+            navigate("/login");
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition shadow"
+        >
+          Sign Out
+        </button>
+      </div>
     </>
   );
 
