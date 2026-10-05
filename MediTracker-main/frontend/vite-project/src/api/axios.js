@@ -6,22 +6,14 @@ export const getActiveBackendUrl = () => {
     if (custom) return custom.trim().replace(/\/+$/, "");
   }
 
-  const isHttpsOrVercel =
-    typeof window !== "undefined" &&
-    (window.location.hostname.includes("vercel.app") || window.location.protocol === "https:");
+  // On Vercel, requests to /api are proxied same-origin via vercel.json rewrites, bypassing all CORS/mixed-content restrictions
+  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+    return "";
+  }
 
   const envUrl = import.meta.env.VITE_BACKEND_URL;
   if (envUrl && envUrl.trim()) {
-    const cleaned = envUrl.trim().replace(/\/+$/, "");
-    // If running on HTTPS (like Vercel), reject insecure http:// endpoints to prevent Mixed Content blocking
-    if (!isHttpsOrVercel || cleaned.startsWith("https://")) {
-      return cleaned;
-    }
-  }
-
-  // Fallback for Vercel/HTTPS deployment
-  if (isHttpsOrVercel) {
-    return "https://jump-poems-level-told.trycloudflare.com";
+    return envUrl.trim().replace(/\/+$/, "");
   }
 
   return "";
