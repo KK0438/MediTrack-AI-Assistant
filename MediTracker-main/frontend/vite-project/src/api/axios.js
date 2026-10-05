@@ -5,14 +5,25 @@ export const getActiveBackendUrl = () => {
     const custom = localStorage.getItem("meditracker_backend_url");
     if (custom) return custom.trim().replace(/\/+$/, "");
   }
+
+  const isHttpsOrVercel =
+    typeof window !== "undefined" &&
+    (window.location.hostname.includes("vercel.app") || window.location.protocol === "https:");
+
   const envUrl = import.meta.env.VITE_BACKEND_URL;
   if (envUrl && envUrl.trim()) {
-    return envUrl.trim().replace(/\/+$/, "");
+    const cleaned = envUrl.trim().replace(/\/+$/, "");
+    // If running on HTTPS (like Vercel), reject insecure http:// endpoints to prevent Mixed Content blocking
+    if (!isHttpsOrVercel || cleaned.startsWith("https://")) {
+      return cleaned;
+    }
   }
-  // Smart fallback for Vercel deployment if VITE_BACKEND_URL was not set in build
-  if (typeof window !== "undefined" && window.location.hostname.includes("vercel.app")) {
+
+  // Fallback for Vercel/HTTPS deployment
+  if (isHttpsOrVercel) {
     return "https://jump-poems-level-told.trycloudflare.com";
   }
+
   return "";
 };
 

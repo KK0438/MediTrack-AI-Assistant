@@ -80,6 +80,16 @@ app.get("/", (req, res) => {
   res.send("MediTrack Backend API is running...");
 });
 
+app.delete("/api/auth/clear-test-user/:email", async (req, res) => {
+  try {
+    const User = (await import("./models/user.js")).default;
+    await User.deleteOne({ email: req.params.email });
+    res.json({ success: true, message: `User ${req.params.email} cleared` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ---------------------------
 // Error Handler
 // ---------------------------
