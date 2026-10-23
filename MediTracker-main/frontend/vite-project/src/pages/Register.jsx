@@ -1,8 +1,9 @@
+// src/pages/Register.jsx
 import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import API, { getActiveBackendUrl, setCustomBackendUrl } from "../api/axios";
+import API from "../api/axios";
 import { AppContext } from "../context/AppContext";
-import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaUserPlus, FaCog, FaCheck, FaRocket, FaUndo } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash } from "react-icons/fa";
 
 function Register() {
   const navigate = useNavigate();
@@ -17,41 +18,6 @@ function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showServerConfig, setShowServerConfig] = useState(false);
-  const [serverUrlInput, setServerUrlInput] = useState(() => getActiveBackendUrl());
-  const [serverSavedMsg, setServerSavedMsg] = useState("");
-
-  const handleSaveServerUrl = () => {
-    setCustomBackendUrl(serverUrlInput);
-    setServerSavedMsg("Backend URL saved!");
-    setError("");
-    setTimeout(() => setServerSavedMsg(""), 3000);
-  };
-
-  const handleResetServerUrl = () => {
-    setCustomBackendUrl("");
-    setServerUrlInput("");
-    setServerSavedMsg("Reset to standalone demo mode!");
-    setError("");
-    setTimeout(() => setServerSavedMsg(""), 3000);
-  };
-
-  const handleQuickDemoRegister = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const res = await API.post("/auth/login", {
-        email: "demo@meditracker.com",
-        password: "demo123",
-      });
-      login(res.data.user, res.data.token);
-      navigate("/dashboard");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to enter demo mode");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -87,9 +53,7 @@ function Register() {
       setError(
         serverError ||
           validationError ||
-          (!err.response
-            ? "Cannot reach the backend server. Please verify your connection or use the Demo mode below."
-            : "Registration failed. Please check your information and try again.")
+          "Registration failed. Please check your information and try again."
       );
     } finally {
       setLoading(false);
@@ -101,37 +65,12 @@ function Register() {
       <div className="max-w-md w-full bg-white shadow-xl rounded-2xl p-8 border border-blue-100">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-green-100 text-green-600 rounded-full mb-3 shadow-inner">
-            <FaUserPlus className="text-2xl" />
-          </div>
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
             Create Account
           </h2>
           <p className="text-sm text-gray-500 mt-2">
             Start tracking your medications with <span className="text-blue-600 font-medium">Medi</span><span className="text-green-600 font-medium">Track</span>
           </p>
-        </div>
-
-        {/* 1-Click Demo Button */}
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={handleQuickDemoRegister}
-            disabled={loading}
-            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-md hover:shadow-lg transition transform active:scale-[0.99] text-sm"
-          >
-            <FaRocket className="text-base text-yellow-300" />
-            <span>Instant Demo Patient (1-Click)</span>
-          </button>
-        </div>
-
-        <div className="relative my-4">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200"></div>
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-3 text-gray-400 font-medium">Or create your own account</span>
-          </div>
         </div>
 
         {error && (
@@ -233,59 +172,6 @@ function Register() {
             Sign In
           </Link>
         </p>
-
-        {/* Server Config Accordion */}
-        <div className="mt-4 pt-3 border-t border-gray-100 text-center">
-          <button
-            type="button"
-            onClick={() => setShowServerConfig(!showServerConfig)}
-            className="inline-flex items-center text-xs text-gray-400 hover:text-gray-600 transition gap-1"
-          >
-            <FaCog className="text-xs" />
-            <span>{showServerConfig ? "Hide Backend URL Settings" : "Configure Backend Server URL"}</span>
-          </button>
-
-          {showServerConfig && (
-            <div className="mt-3 p-3 bg-gray-50 border border-gray-200 rounded-lg text-left">
-              <label htmlFor="serverUrlInputRegister" className="block text-xs font-medium text-gray-700 mb-1">
-                Active Backend API URL
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="url"
-                  id="serverUrlInputRegister"
-                  value={serverUrlInput}
-                  onChange={(e) => setServerUrlInput(e.target.value)}
-                  placeholder="https://your-tunnel.trycloudflare.com or leave empty"
-                  className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleSaveServerUrl}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium shadow-sm transition"
-                >
-                  Save
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetServerUrl}
-                  title="Reset to Demo Mode"
-                  className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-medium transition flex items-center gap-1"
-                >
-                  <FaUndo className="text-[10px]" /> Reset
-                </button>
-              </div>
-              {serverSavedMsg && (
-                <p className="mt-1.5 text-xs text-green-600 flex items-center gap-1 font-medium">
-                  <FaCheck /> {serverSavedMsg}
-                </p>
-              )}
-              <p className="mt-1 text-[11px] text-gray-400">
-                Leave empty for built-in high-performance Demo Mode, or enter custom URL for live Express backend.
-              </p>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
