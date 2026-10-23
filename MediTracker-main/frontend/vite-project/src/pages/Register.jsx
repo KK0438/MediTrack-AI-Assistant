@@ -2,7 +2,7 @@ import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API, { getActiveBackendUrl, setCustomBackendUrl } from "../api/axios";
 import { AppContext } from "../context/AppContext";
-import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaUserPlus, FaCog, FaCheck } from "react-icons/fa";
+import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaUserPlus, FaCog, FaCheck, FaRocket, FaUndo } from "react-icons/fa";
 
 function Register() {
   const navigate = useNavigate();
@@ -18,13 +18,39 @@ function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showServerConfig, setShowServerConfig] = useState(false);
-  const [serverUrlInput, setServerUrlInput] = useState(getActiveBackendUrl());
+  const [serverUrlInput, setServerUrlInput] = useState(() => getActiveBackendUrl());
   const [serverSavedMsg, setServerSavedMsg] = useState("");
 
   const handleSaveServerUrl = () => {
     setCustomBackendUrl(serverUrlInput);
     setServerSavedMsg("Backend URL saved!");
+    setError("");
     setTimeout(() => setServerSavedMsg(""), 3000);
+  };
+
+  const handleResetServerUrl = () => {
+    setCustomBackendUrl("");
+    setServerUrlInput("");
+    setServerSavedMsg("Reset to standalone demo mode!");
+    setError("");
+    setTimeout(() => setServerSavedMsg(""), 3000);
+  };
+
+  const handleQuickDemoRegister = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await API.post("/auth/login", {
+        email: "demo@meditracker.com",
+        password: "demo123",
+      });
+      login(res.data.user, res.data.token);
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to enter demo mode");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -41,7 +67,9 @@ function Register() {
       const res = await API.post("/auth/signup", formData);
 
       // Save user + token in context & localStorage
-      login(res.data.user, res.data.token);
+      if (res.data?.user && res.data?.token) {
+        login(res.data.user, res.data.token);
+      }
 
       // Clear form
       setFormData({
@@ -60,8 +88,8 @@ function Register() {
         serverError ||
           validationError ||
           (!err.response
-            ? "Cannot reach the backend server. Please verify your connection or backend URL."
-            : "Registration failed")
+            ? "Cannot reach the backend server. Please verify your connection or use the Demo mode below."
+            : "Registration failed. Please check your information and try again.")
       );
     } finally {
       setLoading(false);
@@ -72,7 +100,7 @@ function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full bg-white shadow-xl rounded-2xl p-8 border border-blue-100">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-green-100 text-green-600 rounded-full mb-3 shadow-inner">
             <FaUserPlus className="text-2xl" />
           </div>
@@ -84,13 +112,35 @@ function Register() {
           </p>
         </div>
 
+        {/* 1-Click Demo Button */}
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={handleQuickDemoRegister}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 shadow-md hover:shadow-lg transition transform active:scale-[0.99] text-sm"
+          >
+            <FaRocket className="text-base text-yellow-300" />
+            <span>Instant Demo Patient (1-Click)</span>
+          </button>
+        </div>
+
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200"></div>
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-white px-3 text-gray-400 font-medium">Or create your own account</span>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-5 p-3.5 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm rounded-r-md">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div>
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -140,7 +190,7 @@ function Register() {
           {/* Password */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password (min. 6 characters)
+              Password
             </label>
             <div className="relative rounded-md shadow-sm">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -206,7 +256,7 @@ function Register() {
                   id="serverUrlInputRegister"
                   value={serverUrlInput}
                   onChange={(e) => setServerUrlInput(e.target.value)}
-                  placeholder="https://your-tunnel.trycloudflare.com or http://localhost:4000"
+                  placeholder="https://your-tunnel.trycloudflare.com or leave empty"
                   className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 <button
@@ -216,6 +266,14 @@ function Register() {
                 >
                   Save
                 </button>
+                <button
+                  type="button"
+                  onClick={handleResetServerUrl}
+                  title="Reset to Demo Mode"
+                  className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-medium transition flex items-center gap-1"
+                >
+                  <FaUndo className="text-[10px]" /> Reset
+                </button>
               </div>
               {serverSavedMsg && (
                 <p className="mt-1.5 text-xs text-green-600 flex items-center gap-1 font-medium">
@@ -223,7 +281,7 @@ function Register() {
                 </p>
               )}
               <p className="mt-1 text-[11px] text-gray-400">
-                Update this if using a Cloudflare tunnel, ngrok, or custom cloud backend URL.
+                Leave empty for built-in high-performance Demo Mode, or enter custom URL for live Express backend.
               </p>
             </div>
           )}

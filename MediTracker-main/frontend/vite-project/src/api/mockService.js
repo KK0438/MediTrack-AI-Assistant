@@ -1,7 +1,7 @@
 // src/api/mockService.js
 /**
  * In-browser mock service engine for MediTracker.
- * Powers 100% functional offline and demo experiences when backend is unavailable or on 502 Bad Gateway.
+ * Powers 100% functional offline and demo experiences when backend is unavailable.
  */
 
 const STORAGE_USERS = "meditracker_mock_users";
@@ -137,6 +137,54 @@ export const initializeMockDatabase = () => {
   }
 };
 
+// Seed Starter Medicines for New Registered Users
+const seedStarterMedicinesForUser = (userId) => {
+  try {
+    const all = JSON.parse(localStorage.getItem(STORAGE_MEDS) || "[]");
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(today.getDate() + 7);
+
+    const starterMeds = [
+      {
+        _id: `med_amox_${Date.now()}`,
+        id: `med_amox_${Date.now()}`,
+        user: userId,
+        name: "Amoxicillin",
+        dosage: "500mg - 1 capsule",
+        frequency: "Daily",
+        startDate: today.toISOString(),
+        endDate: nextWeek.toISOString(),
+        times: ["08:00 AM", "08:00 PM"],
+        isActive: true,
+        logs: [
+          { _id: `log_s1_${Date.now()}`, date: today.toISOString(), time: "08:00 AM", status: "Taken" },
+          { _id: `log_s2_${Date.now()}`, date: today.toISOString(), time: "08:00 PM", status: "Pending" },
+        ],
+      },
+      {
+        _id: `med_vitd_${Date.now() + 1}`,
+        id: `med_vitd_${Date.now() + 1}`,
+        user: userId,
+        name: "Vitamin D3",
+        dosage: "1000 IU - 1 tablet",
+        frequency: "Daily",
+        startDate: today.toISOString(),
+        endDate: nextWeek.toISOString(),
+        times: ["01:00 PM"],
+        isActive: true,
+        logs: [
+          { _id: `log_s3_${Date.now()}`, date: today.toISOString(), time: "01:00 PM", status: "Pending" },
+        ],
+      },
+    ];
+
+    all.push(...starterMeds);
+    localStorage.setItem(STORAGE_MEDS, JSON.stringify(all));
+  } catch (_) {}
+};
+
 // Helper: Get Current User ID
 const getCurrentUserId = () => {
   try {
@@ -161,16 +209,6 @@ const getUsers = () => {
 // Helper: Save Users
 const saveUsers = (users) => {
   localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
-};
-
-// Helper: Get Medicines
-const getMedicinesFromStorage = (userId) => {
-  try {
-    const all = JSON.parse(localStorage.getItem(STORAGE_MEDS) || "[]");
-    return all.filter((m) => m.user === userId || !userId);
-  } catch (_) {
-    return [];
-  }
 };
 
 // Helper: Save All Medicines
@@ -200,6 +238,14 @@ export const handleMockRequest = async (config) => {
     }
   }
 
+  const makeRes = (status, data, statusText = "OK") => ({
+    status,
+    statusText,
+    headers: { "content-type": "application/json" },
+    config,
+    data,
+  });
+
   // 1. AUTH LOGIN
   if (method === "post" && (url === "/auth/login" || url.endsWith("/auth/login"))) {
     const { email, password } = body;
@@ -228,27 +274,26 @@ export const handleMockRequest = async (config) => {
       const error = new Error("Invalid email or password");
       error.response = {
         status: 400,
+        statusText: "Bad Request",
+        headers: {},
+        config,
         data: { message: "Invalid email or password" },
       };
       throw error;
     }
 
     const token = `mock-token-${Date.now()}`;
-    return {
-      status: 200,
-      statusText: "OK",
-      data: {
-        message: "Login successful (Demo Mode)",
-        user: {
-          id: user.id || user._id,
-          _id: user.id || user._id,
-          name: user.name,
-          email: user.email,
-          profilePic: user.profilePic || "",
-        },
-        token,
+    return makeRes(200, {
+      message: "Login successful (Demo Mode)",
+      user: {
+        id: user.id || user._id,
+        _id: user.id || user._id,
+        name: user.name,
+        email: user.email,
+        profilePic: user.profilePic || "",
       },
-    };
+      token,
+    });
   }
 
   // 2. AUTH SIGNUP
@@ -256,7 +301,13 @@ export const handleMockRequest = async (config) => {
     const { name, email, password } = body;
     if (!email || !password) {
       const error = new Error("Email and password are required");
-      error.response = { status: 400, data: { message: "Email and password are required" } };
+      error.response = {
+        status: 400,
+        statusText: "Bad Request",
+        headers: {},
+        config,
+        data: { message: "Email and password are required" },
+      };
       throw error;
     }
 
@@ -277,25 +328,22 @@ export const handleMockRequest = async (config) => {
         profilePic: "",
       };
       users.push(user);
+      seedStarterMedicinesForUser(user.id);
     }
     saveUsers(users);
 
     const token = `mock-token-${Date.now()}`;
-    return {
-      status: 201,
-      statusText: "Created",
-      data: {
-        message: "User registered successfully",
-        user: {
-          id: user.id,
-          _id: user.id,
-          name: user.name,
-          email: user.email,
-          profilePic: user.profilePic || "",
-        },
-        token,
+    return makeRes(201, {
+      message: "User registered successfully",
+      user: {
+        id: user.id,
+        _id: user.id,
+        name: user.name,
+        email: user.email,
+        profilePic: user.profilePic || "",
       },
-    };
+      token,
+    }, "Created");
   }
 
   const userId = getCurrentUserId();
@@ -304,7 +352,6 @@ export const handleMockRequest = async (config) => {
 
   // 3. DASHBOARD STATS
   if (method === "get" && (url === "/dashboard/stats" || url.endsWith("/dashboard/stats"))) {
-    const now = new Date();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
@@ -356,19 +403,16 @@ export const handleMockRequest = async (config) => {
 
     upcomingSchedule = upcomingSchedule.slice(0, 2);
 
-    return {
-      status: 200,
-      data: {
-        stats: {
-          totalMedicines: userMeds.length,
-          missedDoses,
-          todayDoses,
-          takenDoses,
-        },
-        todaySchedule,
-        upcomingSchedule,
+    return makeRes(200, {
+      stats: {
+        totalMedicines: userMeds.length,
+        missedDoses,
+        todayDoses,
+        takenDoses,
       },
-    };
+      todaySchedule,
+      upcomingSchedule,
+    });
   }
 
   // 4. MARK DOSE
@@ -398,18 +442,15 @@ export const handleMockRequest = async (config) => {
       }
 
       saveAllMedicines(allMeds);
-      return { status: 200, data: { message: `Dose marked as ${status}` } };
+      return makeRes(200, { message: `Dose marked as ${status}` });
     }
 
-    return { status: 200, data: { message: `Dose marked as ${status}` } };
+    return makeRes(200, { message: `Dose marked as ${status}` });
   }
 
   // 5. GET MEDICINES
   if (method === "get" && (url === "/medicines" || url.endsWith("/medicines"))) {
-    return {
-      status: 200,
-      data: userMeds,
-    };
+    return makeRes(200, userMeds);
   }
 
   // 6. ADD MEDICINE
@@ -449,10 +490,7 @@ export const handleMockRequest = async (config) => {
     allMeds.push(newMed);
     saveAllMedicines(allMeds);
 
-    return {
-      status: 201,
-      data: newMed,
-    };
+    return makeRes(201, newMed, "Created");
   }
 
   // 7. UPDATE MEDICINE
@@ -462,9 +500,9 @@ export const handleMockRequest = async (config) => {
     if (medIdx !== -1) {
       allMeds[medIdx] = { ...allMeds[medIdx], ...body };
       saveAllMedicines(allMeds);
-      return { status: 200, data: allMeds[medIdx] };
+      return makeRes(200, allMeds[medIdx]);
     }
-    return { status: 404, data: { message: "Medicine not found" } };
+    return makeRes(404, { message: "Medicine not found" });
   }
 
   // 8. DELETE MEDICINE
@@ -472,7 +510,7 @@ export const handleMockRequest = async (config) => {
     const medId = url.split("/")[2];
     const updated = allMeds.filter((m) => !(m._id === medId && m.user === userId));
     saveAllMedicines(updated);
-    return { status: 200, data: { message: "Medicine deleted successfully" } };
+    return makeRes(200, { message: "Medicine deleted successfully" });
   }
 
   // 9. HISTORY
@@ -493,7 +531,7 @@ export const handleMockRequest = async (config) => {
     });
 
     history.sort((a, b) => new Date(b.date) - new Date(a.date));
-    return { status: 200, data: history };
+    return makeRes(200, history);
   }
 
   // 10. ANALYTICS
@@ -513,10 +551,7 @@ export const handleMockRequest = async (config) => {
     });
 
     const adherence = total > 0 ? Math.round((taken / total) * 100) : 100;
-    return {
-      status: 200,
-      data: { total, taken, missed, pending, adherence },
-    };
+    return makeRes(200, { total, taken, missed, pending, adherence });
   }
 
   // 11. CALENDAR MEDICINE STATUS
@@ -530,7 +565,7 @@ export const handleMockRequest = async (config) => {
         });
       });
     });
-    return { status: 200, data: result };
+    return makeRes(200, result);
   }
 
   // 12. CHATBOT
@@ -553,63 +588,48 @@ export const handleMockRequest = async (config) => {
       answer = "Hello! I am your MediTracker AI Health Assistant. How can I help you with your medications, reminders, or health routines today?";
     }
 
-    return {
-      status: 200,
-      data: { answer },
-    };
+    return makeRes(200, { answer });
   }
 
   // 13. BLOGS
   if (method === "get" && (url === "/blogs" || url.endsWith("/blogs"))) {
-    return {
-      status: 200,
-      data: [
-        {
-          title: "The Power of Medication Adherence in Chronic Care",
-          description: "Taking your medications regularly as prescribed is one of the most critical factors in managing long-term health and preventing hospitalizations.",
-          publishedAt: new Date().toISOString(),
-          url: "https://www.who.int/news-room/fact-sheets",
-          urlToImage: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
-        },
-        {
-          title: "How Smart Reminders & AI Are Transforming Patient Wellness",
-          description: "Explore how personalized notification schedules and intelligent health tracking help patients stay on top of daily treatments effortlessly.",
-          publishedAt: new Date(Date.now() - 86400000).toISOString(),
-          url: "https://www.cdc.gov",
-          urlToImage: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&auto=format&fit=crop&q=60",
-        },
-        {
-          title: "Understanding Antibiotic Resistance and Safe Usage",
-          description: "Why finishing your prescribed antibiotic course matters, and how responsible usage protects community health against resistant bacteria.",
-          publishedAt: new Date(Date.now() - 172800000).toISOString(),
-          url: "https://www.fda.gov",
-          urlToImage: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=800&auto=format&fit=crop&q=60",
-        },
-      ],
-    };
+    return makeRes(200, [
+      {
+        title: "The Power of Medication Adherence in Chronic Care",
+        description: "Taking your medications regularly as prescribed is one of the most critical factors in managing long-term health and preventing hospitalizations.",
+        publishedAt: new Date().toISOString(),
+        url: "https://www.who.int/news-room/fact-sheets",
+        urlToImage: "https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=800&auto=format&fit=crop&q=60",
+      },
+      {
+        title: "How Smart Reminders & AI Are Transforming Patient Wellness",
+        description: "Explore how personalized notification schedules and intelligent health tracking help patients stay on top of daily treatments effortlessly.",
+        publishedAt: new Date(Date.now() - 86400000).toISOString(),
+        url: "https://www.cdc.gov",
+        urlToImage: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&auto=format&fit=crop&q=60",
+      },
+      {
+        title: "Understanding Antibiotic Resistance and Safe Usage",
+        description: "Why finishing your prescribed antibiotic course matters, and how responsible usage protects community health against resistant bacteria.",
+        publishedAt: new Date(Date.now() - 172800000).toISOString(),
+        url: "https://www.fda.gov",
+        urlToImage: "https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=800&auto=format&fit=crop&q=60",
+      },
+    ]);
   }
 
   // 14. CONTACT
   if (method === "post" && (url === "/contact" || url.endsWith("/contact"))) {
-    return {
-      status: 200,
-      data: { message: "Thank you for contacting MediTracker! We have received your message." },
-    };
+    return makeRes(200, { message: "Thank you for contacting MediTracker! We have received your message." });
   }
 
   // 15. PROFILE UPLOAD
   if (method === "post" && url.includes("/user/upload-profile")) {
-    return {
-      status: 200,
-      data: {
-        message: "Profile updated successfully",
-        profilePic: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=60",
-      },
-    };
+    return makeRes(200, {
+      message: "Profile updated successfully",
+      profilePic: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=60",
+    });
   }
 
-  return {
-    status: 200,
-    data: { success: true, message: "Mock response" },
-  };
+  return makeRes(200, { success: true, message: "Mock response" });
 };

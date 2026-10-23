@@ -3,7 +3,7 @@ import React, { useState, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import API, { getActiveBackendUrl, setCustomBackendUrl } from "../api/axios";
 import { AppContext } from "../context/AppContext";
-import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaSignInAlt, FaCog, FaCheck, FaRocket, FaUserCheck } from "react-icons/fa";
+import { FaEnvelope, FaLock, FaEye, FaEyeSlash, FaSignInAlt, FaCog, FaCheck, FaRocket, FaUserCheck, FaUndo } from "react-icons/fa";
 
 function Login() {
   const navigate = useNavigate();
@@ -32,6 +32,14 @@ function Login() {
     e.preventDefault();
     setCustomBackendUrl(serverUrlInput);
     setServerSavedMsg("Backend URL updated successfully!");
+    setError("");
+    setTimeout(() => setServerSavedMsg(""), 3000);
+  };
+
+  const handleResetServerUrl = () => {
+    setCustomBackendUrl("");
+    setServerUrlInput("");
+    setServerSavedMsg("Reset to standalone demo mode!");
     setError("");
     setTimeout(() => setServerSavedMsg(""), 3000);
   };
@@ -254,6 +262,14 @@ function Login() {
                   className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium shadow-sm transition"
                 >
                   Save
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetServerUrl}
+                  title="Reset to Demo Mode"
+                  className="px-2.5 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-medium transition flex items-center gap-1"
+                >
+                  <FaUndo className="text-[10px]" /> Reset
                 </button>
               </div>
               {serverSavedMsg && (
