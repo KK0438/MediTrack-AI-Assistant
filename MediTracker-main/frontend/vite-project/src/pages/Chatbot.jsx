@@ -1,25 +1,75 @@
 // src/components/Chatbot.jsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import API from "../api/axios";
+import { AppContext } from "../context/AppContext";
 
 const Chatbot = () => {
+  const { user } = useContext(AppContext);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const messagesEndRef = useRef(null);
+
+  // Isolate chat storage per user account
+  const userKey = user?._id || user?.id || user?.email || "guest";
+  const storageKey = `chatMessages_${userKey}`;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Load chat messages specifically for the logged-in user
   useEffect(() => {
-    const saved = localStorage.getItem("chatMessages");
-    if (saved) setMessages(JSON.parse(saved));
-  }, []);
+    // Clean up legacy shared key to prevent cross-account contamination
+    try {
+      localStorage.removeItem("chatMessages");
+    } catch (_) {}
 
+    if (!user) {
+      setMessages([]);
+      return;
+    }
+
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+          return;
+        }
+      }
+    } catch (_) {}
+
+    // Initial greeting if no previous chat history exists for this user
+    setMessages([
+      {
+        sender: "ai",
+        text: `Hello ${user?.name || "there"}! I am your MediTracker AI Health Assistant. How can I assist you with your medication schedule or health today?`
+      }
+    ]);
+  }, [userKey, storageKey]);
+
+  // Persist messages only under the specific user's key
   useEffect(() => {
     scrollToBottom();
-    localStorage.setItem("chatMessages", JSON.stringify(messages));
-  }, [messages]);
+    if (user && userKey !== "guest" && messages.length > 0) {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(messages));
+      } catch (_) {}
+    }
+  }, [messages, storageKey, userKey]);
+
+  const clearChat = () => {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch (_) {}
+    setMessages([
+      {
+        sender: "ai",
+        text: `Chat cleared. Hello ${user?.name || "there"}! How can I assist you today?`
+      }
+    ]);
+  };
 
   const sendMessage = async () => {
     if (!message.trim()) return;
@@ -32,13 +82,14 @@ const Chatbot = () => {
 
     try {
       const res = await API.post("/chatbot", { question: currentMessage });
-      const aiMsg = { sender: "ai", text: res.data.answer };
+      const answer = res.data?.answer || res.data?.response || res.data?.message || "I am here to assist with your medications and health. Please ask anytime!";
+      const aiMsg = { sender: "ai", text: answer };
       setMessages(prev => [...prev, aiMsg]);
 
     } catch (error) {
       setMessages(prev => [...prev, {
         sender: "ai",
-        text: error.response?.data?.answer || "The assistant could not respond. Please try again."
+        text: error.response?.data?.answer || error.response?.data?.message || "The assistant could not respond. Please try again."
       }]);
     }
   };
@@ -47,10 +98,19 @@ const Chatbot = () => {
     <div style={styles.container}>
       <div style={styles.chatCard}>
         <div style={styles.header}>
-          🩺 AI Health Assistant
-          <div style={styles.subHeader}>
-            Ask about medicines & health
+          <div style={styles.headerLeft}>
+            <div style={styles.title}>🩺 AI Health Assistant</div>
+            <div style={styles.subHeader}>
+              Ask about medicines & health ({user?.name || "User"})
+            </div>
           </div>
+          <button
+            onClick={clearChat}
+            style={styles.clearBtn}
+            title="Clear this conversation"
+          >
+            Clear Chat
+          </button>
         </div>
 
         <div style={styles.messages}>
@@ -117,19 +177,38 @@ const styles = {
     boxShadow: "0 20px 40px rgba(0,0,0,0.15)"
   },
   header: {
-    padding: "18px",
-    fontSize: "20px",
-    fontWeight: "600",
-    textAlign: "center",
+    padding: "16px 20px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
     background: "linear-gradient(90deg,#6366f1,#4f46e5)",
     color: "white",
     borderTopLeftRadius: "18px",
     borderTopRightRadius: "18px"
   },
+  headerLeft: {
+    display: "flex",
+    flexDirection: "column",
+    textAlign: "left"
+  },
+  title: {
+    fontSize: "20px",
+    fontWeight: "600"
+  },
   subHeader: {
     fontSize: "13px",
     opacity: "0.9",
-    marginTop: "4px"
+    marginTop: "2px"
+  },
+  clearBtn: {
+    background: "rgba(255, 255, 255, 0.18)",
+    color: "white",
+    border: "1px solid rgba(255, 255, 255, 0.35)",
+    padding: "6px 14px",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "13px",
+    fontWeight: "500"
   },
   messages: {
     flex: 1,
