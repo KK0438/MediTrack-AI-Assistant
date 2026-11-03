@@ -14,6 +14,7 @@ import Blogs from "./pages/Blogs";
 import Contact from "./pages/Contact";
 import Register from "./pages/Register";
 import Login from "./pages/Login";
+import InstallApp from "./pages/InstallApp";
 
 // Dashboard & nested pages
 import DashBoard from "./pages/DashBoard";
@@ -61,6 +62,16 @@ function App() {
           element={
             <>
               <Contact />
+              <Footer />
+            </>
+          }
+        />
+
+        <Route
+          path="/install"
+          element={
+            <>
+              <InstallApp />
               <Footer />
             </>
           }
