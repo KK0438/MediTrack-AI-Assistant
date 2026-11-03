@@ -20,11 +20,6 @@ const MedicineSchema = new mongoose.Schema({
       type: String, // Example: "09:00 AM"
     },
   ],
-  currentStock: { type: Number, default: 30 },
-  unit: { type: String, default: "tablets" },
-  dosePerIntake: { type: Number, default: 1 },
-  refillThreshold: { type: Number, default: 5 },
-  lastRefillDate: { type: Date, default: Date.now },
   logs: [
     {
       date: { type: Date, required: true },
@@ -41,4 +36,4 @@ const MedicineSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-export default mongoose.models.Medicine || mongoose.model("Medicine", MedicineSchema);
+export default mongoose.model("Medicine", MedicineSchema);

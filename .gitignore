@@ -1,6 +1,0 @@
-.vercel
-.venv
-__pycache__
-node_modules
-.mongodb-data
-*.log

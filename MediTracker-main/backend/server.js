@@ -16,7 +16,6 @@ import medicineRoutes from "./routes/medicineRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import chatbotRoute from "./routes/chatbotRoute.js";
-import familyRoutes from "./routes/familyRoutes.js";
 
 // Start reminder cron job (MongoDB connection inside cron will reuse)
 import "./reminderCron.js";
@@ -52,7 +51,6 @@ app.use("/api/medicines", medicineRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/chatbot", chatbotRoute);
-app.use("/api/family", familyRoutes);
 
 // ---------------------------
 // Blog API Proxy

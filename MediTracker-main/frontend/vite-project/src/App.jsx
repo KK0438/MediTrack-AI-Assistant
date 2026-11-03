@@ -23,9 +23,7 @@ import History from "./pages/History";
 import Analytics from "./pages/Analytics";
 import CalenderView from "./pages/CalenderView";
 import Chatbot from "./pages/Chatbot";
-import PrescriptionScanner from "./pages/PrescriptionScanner";
-import RefillTracker from "./pages/RefillTracker";
-import FamilyMode from "./pages/FamilyMode";
+
 
 function App() {
   return (
@@ -104,16 +102,17 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={null} />
+          <Route
+            index
+            element={null}
+          />
           <Route path="add-medicine" element={<AddMedicine />} />
           <Route path="my-medicine" element={<MyMedicine />} />
-          <Route path="scanner" element={<PrescriptionScanner />} />
-          <Route path="refills" element={<RefillTracker />} />
-          <Route path="family" element={<FamilyMode />} />
           <Route path="history" element={<History />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="calendar" element={<CalenderView />} />
           <Route path="chatbot" element={<Chatbot />} />
+          
         </Route>
       </Routes>
     </>
