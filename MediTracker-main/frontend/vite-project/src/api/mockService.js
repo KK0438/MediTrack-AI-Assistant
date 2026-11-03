@@ -1,7 +1,7 @@
 // src/api/mockService.js
 /**
  * In-browser mock service engine for MediTracker.
- * Powers 100% functional offline and demo experiences when backend is unavailable.
+ * Powers 100% functional offline, demo, and PWA experiences on Vercel without an external backend.
  */
 
 const STORAGE_USERS = "meditracker_mock_users";
@@ -50,7 +50,7 @@ export const initializeMockDatabase = () => {
   }
   localStorage.setItem(STORAGE_USERS, JSON.stringify(users));
 
-  // 2. Seed Demo Medicines
+  // 2. Seed Demo Medicines with Smart Refill Tracking
   let meds = [];
   try {
     meds = JSON.parse(localStorage.getItem(STORAGE_MEDS) || "[]");
@@ -84,6 +84,11 @@ export const initializeMockDatabase = () => {
         endDate: nextWeek.toISOString(),
         times: ["08:00 AM", "08:00 PM"],
         isActive: true,
+        currentStock: 14,
+        unit: "capsules",
+        dosePerIntake: 1,
+        refillThreshold: 4,
+        lastRefillDate: twoDaysAgo.toISOString(),
         logs: [
           { _id: "log_amox_1", date: twoDaysAgo.toISOString(), time: "08:00 AM", status: "Taken" },
           { _id: "log_amox_2", date: twoDaysAgo.toISOString(), time: "08:00 PM", status: "Taken" },
@@ -104,6 +109,11 @@ export const initializeMockDatabase = () => {
         endDate: nextWeek.toISOString(),
         times: ["01:00 PM"],
         isActive: true,
+        currentStock: 28,
+        unit: "tablets",
+        dosePerIntake: 1,
+        refillThreshold: 5,
+        lastRefillDate: twoDaysAgo.toISOString(),
         logs: [
           { _id: "log_vitd_1", date: twoDaysAgo.toISOString(), time: "01:00 PM", status: "Taken" },
           { _id: "log_vitd_2", date: yesterday.toISOString(), time: "01:00 PM", status: "Taken" },
@@ -121,6 +131,11 @@ export const initializeMockDatabase = () => {
         endDate: nextWeek.toISOString(),
         times: ["09:00 AM", "07:00 PM"],
         isActive: true,
+        currentStock: 5, // Trigger low stock warning for practical demonstration
+        unit: "tablets",
+        dosePerIntake: 1,
+        refillThreshold: 6,
+        lastRefillDate: twoDaysAgo.toISOString(),
         logs: [
           { _id: "log_metf_1", date: twoDaysAgo.toISOString(), time: "09:00 AM", status: "Taken" },
           { _id: "log_metf_2", date: twoDaysAgo.toISOString(), time: "07:00 PM", status: "Taken" },
@@ -158,6 +173,10 @@ const seedStarterMedicinesForUser = (userId) => {
         endDate: nextWeek.toISOString(),
         times: ["08:00 AM", "08:00 PM"],
         isActive: true,
+        currentStock: 14,
+        unit: "capsules",
+        dosePerIntake: 1,
+        refillThreshold: 4,
         logs: [
           { _id: `log_s1_${Date.now()}`, date: today.toISOString(), time: "08:00 AM", status: "Taken" },
           { _id: `log_s2_${Date.now()}`, date: today.toISOString(), time: "08:00 PM", status: "Pending" },
@@ -174,6 +193,10 @@ const seedStarterMedicinesForUser = (userId) => {
         endDate: nextWeek.toISOString(),
         times: ["01:00 PM"],
         isActive: true,
+        currentStock: 30,
+        unit: "tablets",
+        dosePerIntake: 1,
+        refillThreshold: 5,
         logs: [
           { _id: `log_s3_${Date.now()}`, date: today.toISOString(), time: "01:00 PM", status: "Pending" },
         ],
@@ -382,6 +405,8 @@ export const handleMockRequest = async (config) => {
             date: log.date,
             time: log.time,
             status: log.status,
+            currentStock: med.currentStock !== undefined ? med.currentStock : 30,
+            unit: med.unit || "tablets",
           });
         }
 
@@ -415,7 +440,7 @@ export const handleMockRequest = async (config) => {
     });
   }
 
-  // 4. MARK DOSE
+  // 4. MARK DOSE (with Smart Refill Stock decrement)
   if (method === "put" && url.includes("/dashboard/mark-dose/")) {
     const medId = url.split("/").pop();
     const { status, date, time } = body;
@@ -429,6 +454,8 @@ export const handleMockRequest = async (config) => {
         (l) => formatDateKey(l.date) === targetDateKey && l.time === time
       );
 
+      const prevStatus = log ? log.status : "Pending";
+
       if (log) {
         log.status = status;
       } else {
@@ -441,8 +468,18 @@ export const handleMockRequest = async (config) => {
         });
       }
 
+      // Decrement stock if dose taken; restore if untaken
+      const doseIntake = Number(med.dosePerIntake) || 1;
+      const currentStock = Number(med.currentStock !== undefined ? med.currentStock : 30);
+
+      if (status === "Taken" && prevStatus !== "Taken") {
+        med.currentStock = Math.max(0, currentStock - doseIntake);
+      } else if (prevStatus === "Taken" && status !== "Taken") {
+        med.currentStock = currentStock + doseIntake;
+      }
+
       saveAllMedicines(allMeds);
-      return makeRes(200, { message: `Dose marked as ${status}` });
+      return makeRes(200, { message: `Dose marked as ${status}`, currentStock: med.currentStock });
     }
 
     return makeRes(200, { message: `Dose marked as ${status}` });
@@ -453,9 +490,20 @@ export const handleMockRequest = async (config) => {
     return makeRes(200, userMeds);
   }
 
-  // 6. ADD MEDICINE
+  // 6. ADD MEDICINE (with Refill Stock & Schedule Generation)
   if (method === "post" && (url === "/medicines" || url.endsWith("/medicines"))) {
-    const { name, dosage, frequency, times, startDate, endDate } = body;
+    const {
+      name,
+      dosage,
+      frequency,
+      times,
+      startDate,
+      endDate,
+      currentStock,
+      unit,
+      dosePerIntake,
+      refillThreshold,
+    } = body;
 
     const start = new Date(startDate || new Date());
     const end = new Date(endDate || new Date(Date.now() + 7 * 86400000));
@@ -484,6 +532,11 @@ export const handleMockRequest = async (config) => {
       endDate: end.toISOString(),
       times: timeList,
       isActive: true,
+      currentStock: currentStock !== undefined ? Number(currentStock) : 30,
+      unit: unit || "tablets",
+      dosePerIntake: dosePerIntake !== undefined ? Number(dosePerIntake) : 1,
+      refillThreshold: refillThreshold !== undefined ? Number(refillThreshold) : 5,
+      lastRefillDate: new Date().toISOString(),
       logs,
     };
 
@@ -540,18 +593,47 @@ export const handleMockRequest = async (config) => {
     let taken = 0;
     let missed = 0;
     let pending = 0;
+    const medMap = {};
 
     userMeds.forEach((med) => {
+      if (!medMap[med.name]) medMap[med.name] = { taken: 0, missed: 0, total: 0 };
       (med.logs || []).forEach((log) => {
         total++;
-        if (log.status === "Taken") taken++;
-        else if (log.status === "Missed") missed++;
-        else pending++;
+        medMap[med.name].total++;
+        if (log.status === "Taken") {
+          taken++;
+          medMap[med.name].taken++;
+        } else if (log.status === "Missed") {
+          missed++;
+          medMap[med.name].missed++;
+        } else {
+          pending++;
+        }
       });
     });
 
     const adherence = total > 0 ? Math.round((taken / total) * 100) : 100;
-    return makeRes(200, { total, taken, missed, pending, adherence });
+    const medicineWise = Object.entries(medMap).map(([name, s]) => {
+      const resolved = s.taken + s.missed;
+      return {
+        name,
+        adherence: resolved > 0 ? Math.round((s.taken / resolved) * 100) : 100,
+        taken: s.taken,
+        missed: s.missed,
+      };
+    });
+
+    const monthlyProgress = [
+      { month: "Jan", value: 86 },
+      { month: "Feb", value: 89 },
+      { month: "Mar", value: 92 },
+      { month: "Apr", value: 91 },
+      { month: "May", value: 94 },
+      { month: "Jun", value: 93 },
+      { month: "Jul", value: adherence },
+    ];
+
+    return makeRes(200, { total, taken, missed, pending, adherence, medicineWise, monthlyProgress });
   }
 
   // 11. CALENDAR MEDICINE STATUS
@@ -568,13 +650,80 @@ export const handleMockRequest = async (config) => {
     return makeRes(200, result);
   }
 
-  // 12. CHATBOT
+  // 12. FAMILY & CAREGIVER ENDPOINTS
+  if (url.startsWith("/family") || url.includes("/family")) {
+    const familyKey = `meditracker_family_${userId}`;
+    const consentKey = `meditracker_family_consent_${userId}`;
+    const alertsKey = `meditracker_family_alerts_${userId}`;
+
+    if (method === "get" && (url === "/family" || url.endsWith("/family"))) {
+      const list = JSON.parse(localStorage.getItem(familyKey) || "[]");
+      const consent = localStorage.getItem(consentKey) === "true";
+      return makeRes(200, { caregivers: list, consentGranted: consent });
+    }
+
+    if (method === "post" && (url === "/family" || url.endsWith("/family"))) {
+      const list = JSON.parse(localStorage.getItem(familyKey) || "[]");
+      const newCg = {
+        id: `cg_${Date.now()}`,
+        name: body.name || "Family Member",
+        relationship: body.relationship || "Caregiver",
+        email: body.email || "",
+        phone: body.phone || "",
+        alertOnMissed: body.alertOnMissed !== false,
+        alertOnLowRefill: body.alertOnLowRefill !== false,
+        weeklyDigest: body.weeklyDigest !== false,
+        status: "Active",
+        addedDate: new Date().toISOString(),
+      };
+      list.push(newCg);
+      localStorage.setItem(familyKey, JSON.stringify(list));
+      return makeRes(201, newCg);
+    }
+
+    if (method === "post" && url.includes("/family/consent")) {
+      const consentVal = String(body.consent === true);
+      localStorage.setItem(consentKey, consentVal);
+      localStorage.setItem(`${consentKey}_date`, new Date().toISOString());
+      return makeRes(200, { consentGranted: body.consent === true });
+    }
+
+    if (method === "post" && url.includes("/family/send-alert")) {
+      const existingAlerts = JSON.parse(localStorage.getItem(alertsKey) || "[]");
+      const alertRec = {
+        id: `alert_${Date.now()}`,
+        caregiverName: body.caregiverName || "Caregiver",
+        caregiverContact: body.caregiverContact || "user@example.com",
+        patientName: body.patientName || "Patient",
+        medication: body.medication || "Medication",
+        doseTime: body.doseTime || "08:00 AM",
+        type: "Missed Dose Notification",
+        status: "Delivered",
+        timestamp: new Date().toISOString(),
+        messageBody: `[URGENT MEDITRACK ALERT] Patient missed scheduled dose.`,
+      };
+      existingAlerts.unshift(alertRec);
+      localStorage.setItem(alertsKey, JSON.stringify(existingAlerts.slice(0, 20)));
+      return makeRes(200, alertRec);
+    }
+
+    if (method === "get" && url.includes("/family/alerts")) {
+      const existingAlerts = JSON.parse(localStorage.getItem(alertsKey) || "[]");
+      return makeRes(200, existingAlerts);
+    }
+  }
+
+  // 13. CHATBOT
   if (method === "post" && (url === "/chatbot" || url.endsWith("/chatbot"))) {
     const question = (body.question || "").toLowerCase();
     let answer = "I am your MediTracker Health Assistant. Remember to take your prescribed doses on time and consult your physician for changes to your treatment plan.";
 
     if (question.includes("miss") || question.includes("forgot")) {
       answer = "If you miss a dose, take it as soon as you remember. However, if it is almost time for your next scheduled dose, skip the missed dose and resume your regular schedule. Never take double doses to compensate.";
+    } else if (question.includes("refill") || question.includes("stock") || question.includes("pill count")) {
+      answer = "MediTracker automatically calculates remaining tablets and days of supply! Check your 'Smart Refills' tab on the Dashboard to see which medicines are running low and need to be ordered.";
+    } else if (question.includes("family") || question.includes("caregiver")) {
+      answer = "In 'Family & Caregiver' mode, you can grant consent for trusted family members to receive instant missed-dose alerts and weekly progress summaries.";
     } else if (question.includes("amoxicillin") || question.includes("antibiotic")) {
       answer = "Amoxicillin is an antibiotic used to treat bacterial infections. Be sure to complete the entire course prescribed by your doctor even if you feel better earlier.";
     } else if (question.includes("metformin")) {
@@ -591,7 +740,7 @@ export const handleMockRequest = async (config) => {
     return makeRes(200, { answer });
   }
 
-  // 13. BLOGS
+  // 14. BLOGS
   if (method === "get" && (url === "/blogs" || url.endsWith("/blogs"))) {
     return makeRes(200, [
       {
@@ -618,12 +767,12 @@ export const handleMockRequest = async (config) => {
     ]);
   }
 
-  // 14. CONTACT
+  // 15. CONTACT
   if (method === "post" && (url === "/contact" || url.endsWith("/contact"))) {
     return makeRes(200, { message: "Thank you for contacting MediTracker! We have received your message." });
   }
 
-  // 15. PROFILE UPLOAD
+  // 16. PROFILE UPLOAD
   if (method === "post" && url.includes("/user/upload-profile")) {
     return makeRes(200, {
       message: "Profile updated successfully",

@@ -26,8 +26,16 @@ const connectDemoDB = async () => {
       }
     : {};
 
+  if (memoryServer) {
+    try {
+      await memoryServer.stop();
+    } catch (_) {}
+  }
+
   memoryServer = await MongoMemoryServer.create(options);
-  await mongoose.connect(memoryServer.getUri("meditracker"));
+  await mongoose.connect(memoryServer.getUri("meditracker"), {
+    serverSelectionTimeoutMS: 5000,
+  });
 };
 
 export const connectDB = async () => {

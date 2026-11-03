@@ -1,0 +1,30 @@
+# Environment files may contain credentials.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies, build output, and Python environments.
+.vercel/
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.venv/
+**/.venv/
+venv/
+**/venv/
+__pycache__/
+**/__pycache__/
+backend/.local-data/
+backend/.mongodb-data/
+.mongodb-data/
+**/.mongodb-data/
+
+# Local editor and operating-system files.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

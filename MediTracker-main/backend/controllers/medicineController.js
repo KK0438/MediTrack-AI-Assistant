@@ -33,6 +33,11 @@ export const addMedicine = async (req, res) => {
       startDate,
       endDate,
       times,
+      currentStock: req.body.currentStock !== undefined ? Number(req.body.currentStock) : 30,
+      unit: req.body.unit || "tablets",
+      dosePerIntake: req.body.dosePerIntake !== undefined ? Number(req.body.dosePerIntake) : 1,
+      refillThreshold: req.body.refillThreshold !== undefined ? Number(req.body.refillThreshold) : 5,
+      lastRefillDate: new Date(),
       logs,
       user: req.user._id,
     });
@@ -114,11 +119,21 @@ export const markDose = async (req, res) => {
     if (!log)
       return res.status(404).json({ message: "Dose not found" });
 
+    const prevStatus = log.status;
     log.status = status;
+
+    // Smart refill tracking: update stock when dose is marked taken
+    const doseIntake = Number(medicine.dosePerIntake) || 1;
+    const currentStock = Number(medicine.currentStock !== undefined ? medicine.currentStock : 30);
+    if (status === "Taken" && prevStatus !== "Taken") {
+      medicine.currentStock = Math.max(0, currentStock - doseIntake);
+    } else if (prevStatus === "Taken" && status !== "Taken") {
+      medicine.currentStock = currentStock + doseIntake;
+    }
 
     await medicine.save();
 
-    res.json({ message: `Dose marked as ${status}` });
+    res.json({ message: `Dose marked as ${status}`, currentStock: medicine.currentStock });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
